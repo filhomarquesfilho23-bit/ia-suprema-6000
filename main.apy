@@ -1,5 +1,5 @@
 # ============================================
-# 6000 IA SUPREMA - VERSÃO GRÁFICA KIVY
+# 6000 IA SUPREMA - VERSÃO INTERATIVA KIVY
 # Criador: Jose Marques
 # ============================================
 
@@ -7,11 +7,14 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
+from kivy.uix.textinput import TextInput
 from kivy.uix.scrollview import ScrollView
 import random
 import datetime
 import json
 import os
+import ast
+import operator
 
 ARQUIVO = "memoria_suprema.json"
 
@@ -39,61 +42,124 @@ def guardar_memoria():
 
 class SupremaApp(App):
     def build(self):
-        self.title = "6000 IA Suprema"
+        self.title = "6000 IA Suprema Interativa"
         
         layout_principal = BoxLayout(orientation='vertical', padding=10, spacing=6)
         
         # Título
         self.titulo_label = Label(
-            text="6000 IA SUPREMA - GESTOR COMPLETO\nCriador: Jose Marques",
+            text="6000 IA SUPREMA - INTERATIVA\nCriador: Jose Marques",
             size_hint_y=None,
-            height=50,
+            height=45,
             halign='center'
         )
         layout_principal.add_widget(self.titulo_label)
         
-        # Área de Visualização / Texto
-        scroll = ScrollView(size_hint=(1, 0.45))
+        # Campo de Entrada de Texto
+        self.input_texto = TextInput(
+            text="",
+            hint_text="Escreve aqui uma tarefa, nota ou conta matemática...",
+            size_hint_y=None,
+            height=40,
+            multiline=False
+        )
+        layout_principal.add_widget(self.input_texto)
+        
+        # Área de Visualização / Texto (Scroll)
+        scroll = ScrollView(size_hint=(1, 0.4))
         self.resultado_label = Label(
-            text="Bem-vindo! Clica numa opcao abaixo para interagir.",
+            text="Bem-vindo! Usa a caixa acima para escrever e escolhe uma acao abaixo.",
             halign='center',
             valign='middle',
             size_hint_y=None,
-            height=250
+            height=200
         )
         self.resultado_label.bind(
             width=lambda s, w: setattr(s, 'text_size', (w - 20, None)),
-            texture_size=lambda s, t: setattr(s, 'height', max(250, t[1]))
+            texture_size=lambda s, t: setattr(s, 'height', max(200, t[1]))
         )
         scroll.add_widget(self.resultado_label)
         layout_principal.add_widget(scroll)
         
-        # Botões do Menu Principal
-        btn_humor = Button(text="1. IA do Humor", background_color=(0.1, 0.5, 0.8, 1))
+        # Botões de Ação Interativa
+        btn_add_tarefa = Button(text="Adicionar Tarefa", background_color=(0.1, 0.5, 0.8, 1))
+        btn_add_tarefa.bind(on_press=self.adicionar_tarefa)
+        layout_principal.add_widget(btn_add_tarefa)
+        
+        btn_add_nota = Button(text="Guardar Nota", background_color=(0.8, 0.5, 0.1, 1))
+        btn_add_nota.bind(on_press=self.adicionar_nota)
+        layout_principal.add_widget(btn_add_nota)
+        
+        btn_ver_tudo = Button(text="Ver Tarefas e Notas", background_color=(0.7, 0.3, 0.8, 1))
+        btn_ver_tudo.bind(on_press=self.ver_tudo)
+        layout_principal.add_widget(btn_ver_tudo)
+        
+        btn_calcular = Button(text="Calcular Expressao (Logica)", background_color=(0.1, 0.7, 0.4, 1))
+        btn_calcular.bind(on_press=self.calcular_logica)
+        layout_principal.add_widget(btn_calcular)
+        
+        btn_humor = Button(text="IA do Humor", background_color=(0.3, 0.6, 0.6, 1))
         btn_humor.bind(on_press=self.executar_humor)
         layout_principal.add_widget(btn_humor)
         
-        btn_tempo = Button(text="2. Previsao do Tempo (Floriano)", background_color=(0.1, 0.7, 0.4, 1))
-        btn_tempo.bind(on_press=self.executar_tempo)
-        layout_principal.add_widget(btn_tempo)
-        
-        btn_tarefas = Button(text="3. Ver Tarefas Guardadas", background_color=(0.7, 0.3, 0.8, 1))
-        btn_tarefas.bind(on_press=self.executar_tarefas)
-        layout_principal.add_widget(btn_tarefas)
-        
-        btn_notas = Button(text="4. Ver Notas Guardadas", background_color=(0.8, 0.5, 0.1, 1))
-        btn_notas.bind(on_press=self.executar_notas)
-        layout_principal.add_widget(btn_notas)
-        
-        btn_seguranca = Button(text="5. Dicas de Seguranca", background_color=(0.3, 0.6, 0.6, 1))
-        btn_seguranca.bind(on_press=self.executar_seguranca)
-        layout_principal.add_widget(btn_seguranca)
-        
-        btn_sair = Button(text="0. Sair", background_color=(0.8, 0.2, 0.2, 1))
+        btn_sair = Button(text="Sair", background_color=(0.8, 0.2, 0.2, 1))
         btn_sair.bind(on_press=self.parar_app)
         layout_principal.add_widget(btn_sair)
         
         return layout_principal
+
+    def adicionar_tarefa(self, instance):
+        texto = self.input_texto.text.strip()
+        if texto:
+            memoria["tarefas"].append({"texto": texto, "concluida": False})
+            guardar_memoria()
+            self.resultado_label.text = f"Sucesso! Tarefa guardada:\n'{texto}'"
+            self.input_texto.text = ""
+        else:
+            self.resultado_label.text = "Aviso: Escreve algo na caixa de texto primeiro!"
+
+    def adicionar_nota(self, instance):
+        texto = self.input_texto.text.strip()
+        if texto:
+            memoria["notas"].append(texto)
+            guardar_memoria()
+            self.resultado_label.text = f"Sucesso! Nota guardada:\n'{texto}'"
+            self.input_texto.text = ""
+        else:
+            self.resultado_label.text = "Aviso: Escreve algo na caixa de texto primeiro!"
+
+    def ver_tudo(self, instance):
+        tarefas = memoria.get("tarefas", [])
+        notas = memoria.get("notas", [])
+        
+        res = "--- MEMORIA GUARDADA ---\n\n[TAREFAS]:\n"
+        if not tarefas:
+            res += "Nenhuma tarefa.\n"
+        else:
+            for i, t in enumerate(tarefas, 1):
+                estado = "OK" if t.get("concluida") else "PENDENTE"
+                res += f"{i}. [{estado}] {t['texto']}\n"
+                
+        res += "\n[NOTAS]:\n"
+        if not notas:
+            res += "Nenhuma nota.\n"
+        else:
+            for i, n in enumerate(notas, 1):
+                res += f"{i}. {n}\n"
+                
+        self.resultado_label.text = res
+
+    def calcular_logica(self, instance):
+        expressao = self.input_texto.text.strip()
+        if not expressao:
+            self.resultado_label.text = "Aviso: Escreve uma expressao matematica na caixa (ex: 50+25*2)."
+            return
+        
+        try:
+            resultado = eval(expressao, {"__builtins__": {}}, {})
+            self.resultado_label.text = f"Expressao: {expressao}\nResultado: {resultado}"
+        except Exception:
+            self.resultado_label.text = "Erro: Expressao matematica invalida."
 
     def executar_humor(self, instance):
         piadas = [
@@ -102,45 +168,6 @@ class SupremaApp(App):
             "O Python foi à escola aprender a contar os espaços."
         ]
         self.resultado_label.text = f"--- IA DO HUMOR ---\n\n{random.choice(piadas)}"
-
-    def executar_tempo(self, instance):
-        self.resultado_label.text = (
-            "--- PREVISAO DO TEMPO (FLORIANO) ---\n\n"
-            "Temperatura: 31°C\n"
-            "Condicao: Céu limpo / Ensolarado\n"
-            "Humidade: 55%\n"
-            "Vento: 12 km/h"
-        )
-
-    def executar_tarefas(self, instance):
-        tarefas = memoria.get("tarefas", [])
-        if not tarefas:
-            texto = "--- GESTOR DE TAREFAS ---\n\nNenhuma tarefa guardada na memoria."
-        else:
-            texto = "--- GESTOR DE TAREFAS ---\n\n"
-            for i, t in enumerate(tarefas, 1):
-                estado = "CONCLUIDA" if t.get("concluida") else "PENDENTE"
-                texto += f"{i}. [{estado}] {t['texto']}\n"
-        self.resultado_label.text = texto
-
-    def executar_notas(self, instance):
-        notas = memoria.get("notas", [])
-        if not notas:
-            texto = "--- MEMORIA DE NOTAS ---\n\nAinda nao ha notas guardadas."
-        else:
-            texto = "--- MEMORIA DE NOTAS ---\n\n"
-            for i, n in enumerate(notas, 1):
-                texto += f"{i}. {n}\n"
-        self.resultado_label.text = texto
-
-    def executar_seguranca(self, instance):
-        self.resultado_label.text = (
-            "--- SEGURANCA DIGITAL ---\n\n"
-            "1. Usa passwords fortes e unicas.\n"
-            "2. Ativa sempre a autenticação de dois fatores (2FA).\n"
-            "3. Nunca cliques em links suspeitos.\n"
-            "4. Mantém o sistema atualizado."
-        )
 
     def parar_app(self, instance):
         App.get_running_app().stop()
